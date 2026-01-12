@@ -55,6 +55,25 @@ mongoose.connect(process.env.MONGO_URI)
   .catch(err => console.error("Mongo error:", err));
 
 const PORT = process.env.PORT || 3000;
+// Route to register a new client
+app.post("/client/register", async (req, res) => {
+  const { name } = req.body; // optional name for the client
+
+  // Generate a unique clientId
+  const clientId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  try {
+    // Save the client in MongoDB
+    const client = new Client({ clientId, name: name || "New Client" });
+    await client.save();
+
+    // Return client info
+    res.json({ clientId, name: client.name });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to create client" });
+  }
+});
 app.listen(PORT, () => {
   console.log("Server running on port", PORT);
 });
