@@ -1,19 +1,20 @@
 const express = require("express");
+const cors = require("cors");
 const mongoose = require("mongoose");
 
 const app = express();
+
+app.use(cors());              // ✅ ALLOW FRONTEND ACCESS
 app.use(express.json());
 
-// MongoDB (safe connection)
-mongoose.connect(process.env.MONGO_URI || "")
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => {
-    console.log("MongoDB NOT connected (safe for now)");
-  });
+// Test route
+app.get("/", (req, res) => {
+  res.send("Chatbot backend running");
+});
 
 // Chat route
 app.post("/chat", async (req, res) => {
-  const { message } = req.body;
+  const { message, clientId } = req.body;
 
   if (!message) {
     return res.json({ reply: "No message received" });
@@ -24,10 +25,10 @@ app.post("/chat", async (req, res) => {
   });
 });
 
-// Root test
-app.get("/", (req, res) => {
-  res.send("Chatbot backend running");
-});
+// MongoDB
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.error("Mongo error:", err));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
