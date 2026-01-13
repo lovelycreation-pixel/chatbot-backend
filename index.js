@@ -1,79 +1,129 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-const Client = require("./models/Client"); // import the Client model
+const Client = require("./models/Client");
+
 const app = express();
 
-app.use(cors());              // ✅ ALLOW FRONTEND ACCESS
+/* ======================
+   MIDDLEWARE
+====================== */
+app.use(cors());
 app.use(express.json());
 
-// Test route
+/* ======================
+   BASIC HEALTH CHECK
+====================== */
 app.get("/", (req, res) => {
   res.send("Chatbot backend running");
 });
 
-// Chat route
+/* ======================
+   CHAT INTELLIGENCE (PHASE 1)
+====================== */
 app.post("/chat", async (req, res) => {
   const { message, clientId } = req.body;
 
-  if (!message) return res.json({ reply: "No message received" });
+  // Safety checks
+  if (!clientId) {
+    return res.json({ reply: "Client ID missing" });
+  }
+
+  if (!message || !message.trim()) {
+    return res.json({ reply: "No message received" });
+  }
 
   try {
-    // Find client info
+    // Load client
     const client = await Client.findOne({ clientId });
-    if (!client) return res.json({ reply: "Client not found" });
-
-    const info = client.adminInfo || "";
-    const apiKey = client.apiKey || "";
-
-    // For now, basic response using your previous matching method
-    const stopWords = ["is","are","am","was","the","a","an","of","to","in","on","for","with","does","do","did","how","why","when"];
-    const inputWords = message.toLowerCase().split(/\W+/).filter(w => !stopWords.includes(w));
-    const infoSentences = info.split(/[.!?]/).filter(Boolean);
-
-    let best = "";
-    let maxScore = 0;
-    for (let sentence of infoSentences) {
-      let score = 0;
-      inputWords.forEach(w => { if(sentence.toLowerCase().includes(w)) score++; });
-      if(score > maxScore) { maxScore = score; best = sentence.trim(); }
+    if (!client) {
+      return res.json({ reply: "Client not found" });
     }
 
-    // Fallback if no match
-    const reply = maxScore ? best : "Sorry, I don't understand.";
+    const adminInfo = client.adminInfo || "";
+    const apiKey = client.apiKey || ""; // switch prepared (AI later)
+    const fallback = client.fallback || "Sorry, I don't understand.";
+
+    // BASIC MODE (no AI yet)
+    const stopWords = [
+      "is","are","am","was","the","a","an","of","to","in","on",
+      "for","with","does","do","did","how","why","when"
+    ];
+
+    const inputWords = message
+      .toLowerCase()
+      .split(/\W+/)
+      .filter(w => w && !stopWords.includes(w));
+
+    const sentences = adminInfo
+      .split(/[.!?]/)
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    let bestMatch = "";
+    let bestScore = 0;
+
+    for (const sentence of sentences) {
+      let score = 0;
+      for (const word of inputWords) {
+        if (sentence.toLowerCase().includes(word)) {
+          score++;
+        }
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = sentence;
+      }
+    }
+
+    const reply = bestScore > 0 ? bestMatch : fallback;
     res.json({ reply });
 
   } catch (err) {
-    console.error(err);
+    console.error("Chat error:", err);
     res.json({ reply: "Server error. Please try again." });
   }
 });
 
-// MongoDB
-mongoose.connect(process.env.MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
-  .catch(err => console.error("Mongo error:", err));
-
-const PORT = process.env.PORT || 3000;
-// Route to register a new client
+/* ======================
+   CLIENT REGISTRATION
+====================== */
 app.post("/client/register", async (req, res) => {
-  const { name } = req.body; // optional name for the client
+  const { name } = req.body;
 
-  // Generate a unique clientId
-  const clientId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const clientId =
+    Date.now().toString(36) +
+    Math.random().toString(36).slice(2, 8);
 
   try {
-    // Save the client in MongoDB
-    const client = new Client({ clientId, name: name || "New Client" });
-    await client.save();
+    const client = new Client({
+      clientId,
+      name: name || "New Client",
+      adminInfo: "",
+      apiKey: "",
+      fallback: "Sorry, I don't understand."
+    });
 
-    // Return client info
+    await client.save();
     res.json({ clientId, name: client.name });
+
   } catch (err) {
-    console.error(err);
+    console.error("Client register error:", err);
     res.status(500).json({ error: "Failed to create client" });
   }
 });
-app.listen(PORT, () => {
-  console.log("Server running on port", PORT);
-});
+
+/* ======================
+   DATABASE + SERVER
+====================== */
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => {
+    console.log("MongoDB connected");
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+      console.log("Server running on port", PORT);
+    });
+  })
+  .catch(err => {
+    console.error("MongoDB connection failed:", err);
+  });
