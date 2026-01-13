@@ -23,6 +23,13 @@ app.get("/", (req, res) => {
 ====================== */
 app.post("/chat", async (req, res) => {
   const { message, clientId } = req.body;
+   // Save user message
+await Message.create({
+  clientId,
+  role: "user",
+  content: message,
+  size: Buffer.byteLength(message, "utf8")
+});
 
   // Safety checks
   if (!clientId) {
