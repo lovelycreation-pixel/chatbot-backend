@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
-
 const Client = require("./models/Client");
 const Message = require("./models/Message");
 
@@ -14,48 +13,40 @@ app.use(cors());
 app.use(express.json());
 
 /* ======================
-   HEALTH CHECK
+   BASIC HEALTH CHECK
 ====================== */
 app.get("/", (req, res) => {
   res.send("Chatbot backend running");
 });
 
 /* ======================
-   CHAT INTELLIGENCE
-   Phase 1 + Phase 2.2
+   CHAT INTELLIGENCE (PHASE 2)
 ====================== */
 app.post("/chat", async (req, res) => {
   const { message, clientId } = req.body;
 
-  /* ---- Safety checks ---- */
-  if (!clientId) {
-    return res.json({ reply: "Client ID missing" });
-  }
-
-  if (!message || !message.trim()) {
-    return res.json({ reply: "No message received" });
-  }
+  if (!clientId) return res.json({ reply: "Client ID missing" });
+  if (!message || !message.trim()) return res.json({ reply: "No message received" });
 
   try {
-    /* ---- Load client ---- */
+    // Load client
     const client = await Client.findOne({ clientId });
-    if (!client) {
-      return res.json({ reply: "Client not found" });
-    }
+    if (!client) return res.json({ reply: "Client not found" });
 
-    /* ---- Save USER message ---- */
+    const adminInfo = client.adminInfo || "";
+    const apiKey = client.apiKey || ""; // AI switch prepared
+    const fallback = client.fallback || "Sorry, I don't understand.";
+
+    // ======= SAVE USER MESSAGE =======
     await Message.create({
       clientId,
       role: "user",
       content: message,
-      size: Buffer.byteLength(message, "utf8")
+      size: Buffer.byteLength(message, "utf8"),
+      // Optional: calculate expiresAt here later for retention rules
     });
 
-    const adminInfo = client.adminInfo || "";
-    const apiKey = client.apiKey || ""; // AI switch ready (later)
-    const fallback = client.fallback || "Sorry, I don't understand.";
-
-    /* ---- BASIC MATCHING MODE ---- */
+    // ======= BASIC MODE (NO AI YET) =======
     const stopWords = [
       "is","are","am","was","the","a","an","of","to","in","on",
       "for","with","does","do","did","how","why","when"
@@ -66,7 +57,7 @@ app.post("/chat", async (req, res) => {
       .split(/\W+/)
       .filter(w => w && !stopWords.includes(w));
 
-    const sentences = adminInfo.split(/[.!?]/);
+    const sentences = adminInfo.split(/[.!?]/).map(s => s.trim()).filter(Boolean);
 
     let bestMatch = "";
     let bestScore = 0;
@@ -74,24 +65,23 @@ app.post("/chat", async (req, res) => {
     for (const sentence of sentences) {
       let score = 0;
       for (const word of inputWords) {
-        if (sentence.toLowerCase().includes(word)) {
-          score++;
-        }
+        if (sentence.toLowerCase().includes(word)) score++;
       }
       if (score > bestScore) {
         bestScore = score;
-        bestMatch = sentence.trim();
+        bestMatch = sentence;
       }
     }
 
     const reply = bestScore > 0 ? bestMatch : fallback;
 
-    /* ---- Save BOT reply ---- */
+    // ======= SAVE BOT RESPONSE =======
     await Message.create({
       clientId,
       role: "bot",
       content: reply,
-      size: Buffer.byteLength(reply, "utf8")
+      size: Buffer.byteLength(reply, "utf8"),
+      // Optional: calculate expiresAt for bot messages too
     });
 
     res.json({ reply });
@@ -133,8 +123,7 @@ app.post("/client/register", async (req, res) => {
 /* ======================
    DATABASE + SERVER
 ====================== */
-mongoose
-  .connect(process.env.MONGO_URI)
+mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected");
     const PORT = process.env.PORT || 3000;
