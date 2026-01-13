@@ -1,8 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
+
 const Client = require("./models/Client");
 const Message = require("./models/Message");
+
 const app = express();
 
 /* ======================
@@ -12,26 +14,20 @@ app.use(cors());
 app.use(express.json());
 
 /* ======================
-   BASIC HEALTH CHECK
+   HEALTH CHECK
 ====================== */
 app.get("/", (req, res) => {
   res.send("Chatbot backend running");
 });
 
 /* ======================
-   CHAT INTELLIGENCE (PHASE 1)
+   CHAT INTELLIGENCE
+   Phase 1 + Phase 2.2
 ====================== */
 app.post("/chat", async (req, res) => {
   const { message, clientId } = req.body;
-   // Save user message
-await Message.create({
-  clientId,
-  role: "user",
-  content: message,
-  size: Buffer.byteLength(message, "utf8")
-});
 
-  // Safety checks
+  /* ---- Safety checks ---- */
   if (!clientId) {
     return res.json({ reply: "Client ID missing" });
   }
@@ -41,17 +37,25 @@ await Message.create({
   }
 
   try {
-    // Load client
+    /* ---- Load client ---- */
     const client = await Client.findOne({ clientId });
     if (!client) {
       return res.json({ reply: "Client not found" });
     }
 
+    /* ---- Save USER message ---- */
+    await Message.create({
+      clientId,
+      role: "user",
+      content: message,
+      size: Buffer.byteLength(message, "utf8")
+    });
+
     const adminInfo = client.adminInfo || "";
-    const apiKey = client.apiKey || ""; // switch prepared (AI later)
+    const apiKey = client.apiKey || ""; // AI switch ready (later)
     const fallback = client.fallback || "Sorry, I don't understand.";
 
-    // BASIC MODE (no AI yet)
+    /* ---- BASIC MATCHING MODE ---- */
     const stopWords = [
       "is","are","am","was","the","a","an","of","to","in","on",
       "for","with","does","do","did","how","why","when"
@@ -62,10 +66,7 @@ await Message.create({
       .split(/\W+/)
       .filter(w => w && !stopWords.includes(w));
 
-    const sentences = adminInfo
-      .split(/[.!?]/)
-      .map(s => s.trim())
-      .filter(Boolean);
+    const sentences = adminInfo.split(/[.!?]/);
 
     let bestMatch = "";
     let bestScore = 0;
@@ -79,11 +80,20 @@ await Message.create({
       }
       if (score > bestScore) {
         bestScore = score;
-        bestMatch = sentence;
+        bestMatch = sentence.trim();
       }
     }
 
     const reply = bestScore > 0 ? bestMatch : fallback;
+
+    /* ---- Save BOT reply ---- */
+    await Message.create({
+      clientId,
+      role: "bot",
+      content: reply,
+      size: Buffer.byteLength(reply, "utf8")
+    });
+
     res.json({ reply });
 
   } catch (err) {
@@ -123,7 +133,8 @@ app.post("/client/register", async (req, res) => {
 /* ======================
    DATABASE + SERVER
 ====================== */
-mongoose.connect(process.env.MONGO_URI)
+mongoose
+  .connect(process.env.MONGO_URI)
   .then(() => {
     console.log("MongoDB connected");
     const PORT = process.env.PORT || 3000;
