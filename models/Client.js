@@ -1,11 +1,49 @@
 const mongoose = require("mongoose");
 
-const clientSchema = new mongoose.Schema({
-  clientId: { type: String, unique: true, required: true }, // unique for each client
-  name: { type: String, default: "New Client" },
-  adminInfo: { type: String, default: "" }, // all admin content
-  apiKey: { type: String, default: "" }, // AI API key
-  createdAt: { type: Date, default: Date.now }
+const ClientSchema = new mongoose.Schema({
+  clientId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+
+  name: {
+    type: String,
+    default: "New Client"
+  },
+
+  adminInfo: {
+    type: String,
+    default: ""
+  },
+
+  apiKey: {
+    type: String,
+    default: ""
+  },
+
+  fallback: {
+    type: String,
+    default: "Sorry, I don't understand."
+  },
+
+  /* ===== Phase 5.1.1 additions ===== */
+
+  retentionDays: {
+    type: Number,
+    default: 365 // 1 year
+  },
+
+  storageLimitMB: {
+    type: Number,
+    default: 1024 // 1 GB
+  },
+
+  avatar: {
+    type: String,
+    default: ""
+  }
+
 });
 
-module.exports = mongoose.model("Client", clientSchema);
+module.exports = mongoose.model("Client", ClientSchema);
