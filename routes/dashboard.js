@@ -4,7 +4,7 @@ const Client = require("../models/Client");
 const Message = require("../models/Message");
 
 /* ===============================
-   ROOT: LIST ALL CLIENTS
+   ROOT: LIST ALL CLIENTS (SAFE LIST)
    =============================== */
 router.get("/clients", async (req, res) => {
   try {
@@ -42,12 +42,28 @@ router.post("/clients/create", async (req, res) => {
 
     res.json({
       clientId,
-      name: client.name,
-      embedCode: `<script src="YOUR_WIDGET_URL.js" data-client-id="${clientId}"></script>`
+      name: client.name
     });
 
   } catch (err) {
     res.status(500).json({ error: "Client creation failed" });
+  }
+});
+
+/* ===============================
+   ROOT: FULL CLIENT DETAILS (ADMIN)
+   =============================== */
+router.get("/clients/:clientId", async (req, res) => {
+  try {
+    const client = await Client.findOne({ clientId: req.params.clientId });
+
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    res.json(client);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to fetch client details" });
   }
 });
 
@@ -61,7 +77,14 @@ router.put("/clients/:clientId", async (req, res) => {
   try {
     const client = await Client.findOneAndUpdate(
       { clientId },
-      updates,
+      {
+        name: updates.name,
+        retentionDays: updates.retentionDays,
+        storageLimitMB: updates.storageLimitMB,
+        assistantName: updates.assistantName,
+        assistantAvatar: updates.assistantAvatar,
+        apiKey: updates.apiKey
+      },
       { new: true }
     );
 
@@ -73,6 +96,34 @@ router.put("/clients/:clientId", async (req, res) => {
 
   } catch (err) {
     res.status(500).json({ error: "Update failed" });
+  }
+});
+
+/* ===============================
+   ROOT: GENERATE WIDGET EMBED CODE
+   =============================== */
+router.get("/clients/:clientId/widget", async (req, res) => {
+  try {
+    const client = await Client.findOne({ clientId: req.params.clientId });
+
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    const widgetCode = `
+<!-- AI Chatbot Widget -->
+<script>
+  window.ChatbotConfig = {
+    clientId: "${client.clientId}",
+    apiUrl: "https://YOUR_BACKEND_URL/chat"
+  };
+</script>
+<script src="https://YOUR_BACKEND_URL/widget.js" defer></script>
+`;
+
+    res.json({ widgetCode });
+  } catch (err) {
+    res.status(500).json({ error: "Widget generation failed" });
   }
 });
 
