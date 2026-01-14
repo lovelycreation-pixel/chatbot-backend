@@ -13,6 +13,12 @@ app.use(cors());
 app.use(express.json());
 
 /* ======================
+   DASHBOARD ROUTES
+====================== */
+const dashboardRoutes = require("./routes/dashboard");
+app.use("/dashboard", dashboardRoutes);
+
+/* ======================
    BASIC HEALTH CHECK
 ====================== */
 app.get("/", (req, res) => {
