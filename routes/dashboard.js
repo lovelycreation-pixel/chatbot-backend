@@ -1,8 +1,18 @@
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-admin-secret";
 const express = require("express");
 const router = express.Router();
 const Client = require("../models/Client");
 const Message = require("../models/Message");
 const { requireRoot } = require("../middleware/auth");
+
+
+router.use((req, res, next) => {
+  const token = req.headers["x-admin-token"];
+  if (token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+});
 /* ===============================
    ROOT: LIST ALL CLIENTS (SAFE LIST)
    =============================== */
