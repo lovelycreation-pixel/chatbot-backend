@@ -1,8 +1,8 @@
-// ===============================
-// DASHBOARD ROUTES
-// ===============================
+/* ===============================
+   DASHBOARD ROUTES
+=============================== */
 
-// 1️⃣ Load environment variables first
+// 1️⃣ Load environment variables
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-admin-secret";
 
 // 2️⃣ Core imports
@@ -13,11 +13,10 @@ const router = express.Router();
 const Client = require("../models/Client");
 const Message = require("../models/Message");
 
-// 4️⃣ Middleware (if you have custom auth)
+// 4️⃣ Middleware (custom auth)
 const { requireRoot } = require("../middleware/auth");
 
 // 5️⃣ ADMIN AUTH MIDDLEWARE
-// All routes after this will require the admin token
 router.use((req, res, next) => {
   const token = req.headers["x-admin-token"];
   if (token !== ADMIN_TOKEN) {
@@ -26,18 +25,18 @@ router.use((req, res, next) => {
   next();
 });
 
-// 6️⃣ ROUTES START HERE
-// Example: minimal test route
+/* ===============================
+   ROUTES START
+=============================== */
+
+// 0️⃣ Test route
 router.get("/test", (req, res) => {
   res.json({ ok: true });
 });
 
-// 7️⃣ EXPORT THE ROUTER
-module.exports = router;
-/* ===============================
-   ROOT: LIST ALL CLIENTS (SAFE LIST)
-   =============================== */
+// 1️⃣ List all clients (safe list)
 router.get("/clients", requireRoot, async (req, res) => {
+  try {
     const clients = await Client.find({}, {
       clientId: 1,
       name: 1,
@@ -45,16 +44,13 @@ router.get("/clients", requireRoot, async (req, res) => {
       retentionDays: 1,
       apiKey: 1
     });
-
     res.json(clients);
   } catch (err) {
     res.status(500).json({ error: "Failed to load clients" });
   }
 });
 
-/* ===============================
-   ROOT: CREATE NEW CLIENT
-   =============================== */
+// 2️⃣ Create new client
 router.post("/clients/create", requireRoot, async (req, res) => {
   const { name } = req.body;
 
@@ -62,16 +58,16 @@ router.post("/clients/create", requireRoot, async (req, res) => {
     Date.now().toString(36) +
     Math.random().toString(36).slice(2, 8);
 
-  try {
-    const clientToken =
-  Math.random().toString(36).slice(2) +
-  Math.random().toString(36).slice(2);
+  const clientToken =
+    Math.random().toString(36).slice(2) +
+    Math.random().toString(36).slice(2);
 
-const client = new Client({
-  clientId,
-  name: name || "New Client",
-  clientToken
-});
+  try {
+    const client = new Client({
+      clientId,
+      name: name || "New Client",
+      clientToken
+    });
 
     await client.save();
 
@@ -79,22 +75,17 @@ const client = new Client({
       clientId,
       name: client.name
     });
-
   } catch (err) {
     res.status(500).json({ error: "Client creation failed" });
   }
 });
 
-/* ===============================
-   ROOT: FULL CLIENT DETAILS (ADMIN)
-   =============================== */
+// 3️⃣ Full client details (admin only)
 router.get("/clients/:clientId", requireRoot, async (req, res) => {
   try {
     const client = await Client.findOne({ clientId: req.params.clientId });
 
-    if (!client) {
-      return res.status(404).json({ error: "Client not found" });
-    }
+    if (!client) return res.status(404).json({ error: "Client not found" });
 
     res.json(client);
   } catch (err) {
@@ -102,9 +93,7 @@ router.get("/clients/:clientId", requireRoot, async (req, res) => {
   }
 });
 
-/* ===============================
-   ROOT: UPDATE CLIENT SETTINGS
-   =============================== */
+// 4️⃣ Update client settings
 router.put("/clients/:clientId", requireRoot, async (req, res) => {
   const { clientId } = req.params;
   const updates = req.body;
@@ -123,27 +112,20 @@ router.put("/clients/:clientId", requireRoot, async (req, res) => {
       { new: true }
     );
 
-    if (!client) {
-      return res.status(404).json({ error: "Client not found" });
-    }
+    if (!client) return res.status(404).json({ error: "Client not found" });
 
     res.json(client);
-
   } catch (err) {
     res.status(500).json({ error: "Update failed" });
   }
 });
 
-/* ===============================
-   ROOT: GENERATE WIDGET EMBED CODE
-   =============================== */
+// 5️⃣ Generate widget embed code
 router.get("/clients/:clientId/widget", requireRoot, async (req, res) => {
   try {
     const client = await Client.findOne({ clientId: req.params.clientId });
 
-    if (!client) {
-      return res.status(404).json({ error: "Client not found" });
-    }
+    if (!client) return res.status(404).json({ error: "Client not found" });
 
     const widgetCode = `
 <!-- AI Chatbot Widget -->
@@ -162,9 +144,7 @@ router.get("/clients/:clientId/widget", requireRoot, async (req, res) => {
   }
 });
 
-/* ===============================
-   ROOT: DELETE CLIENT
-   =============================== */
+// 6️⃣ Delete client
 router.delete("/clients/:clientId", requireRoot, async (req, res) => {
   const { clientId } = req.params;
 
@@ -173,16 +153,13 @@ router.delete("/clients/:clientId", requireRoot, async (req, res) => {
     await Message.deleteMany({ clientId });
 
     res.json({ success: true });
-
   } catch (err) {
     res.status(500).json({ error: "Delete failed" });
   }
 });
 
-/* ===============================
-   ROOT: STORAGE USAGE (VISUAL READY)
-=============================== */
-router.get("/clients/:clientId/storage", async (req, res) => {
+// 7️⃣ Storage usage (visualization ready)
+router.get("/clients/:clientId/storage", requireRoot, async (req, res) => {
   const { clientId } = req.params;
 
   try {
@@ -195,9 +172,7 @@ router.get("/clients/:clientId/storage", async (req, res) => {
     const usedMB = +(usedBytes / (1024 * 1024)).toFixed(2);
 
     const client = await Client.findOne({ clientId });
-    if (!client) {
-      return res.status(404).json({ error: "Client not found" });
-    }
+    if (!client) return res.status(404).json({ error: "Client not found" });
 
     const limitMB = client.storageLimitMB || 100;
     const remainingMB = +(limitMB - usedMB).toFixed(2);
@@ -216,15 +191,12 @@ router.get("/clients/:clientId/storage", async (req, res) => {
       status,
       historyPaused: usedMB >= limitMB
     });
-
   } catch (err) {
     res.status(500).json({ error: "Storage calculation failed" });
   }
 });
 
-/* ===============================
-   ROOT: VIEW CLIENT CHAT HISTORY
-   =============================== */
+// 8️⃣ View client chat history
 router.get("/clients/:clientId/messages", requireRoot, async (req, res) => {
   const { clientId } = req.params;
 
@@ -234,10 +206,12 @@ router.get("/clients/:clientId/messages", requireRoot, async (req, res) => {
       .limit(200);
 
     res.json(messages);
-
   } catch (err) {
     res.status(500).json({ error: "Failed to load messages" });
   }
 });
 
+/* ===============================
+   EXPORT ROUTER
+=============================== */
 module.exports = router;
