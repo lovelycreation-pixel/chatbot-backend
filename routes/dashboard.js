@@ -2,12 +2,11 @@ const express = require("express");
 const router = express.Router();
 const Client = require("../models/Client");
 const Message = require("../models/Message");
-
+const { requireRoot } = require("../middleware/auth");
 /* ===============================
    ROOT: LIST ALL CLIENTS (SAFE LIST)
    =============================== */
-router.get("/clients", async (req, res) => {
-  try {
+router.get("/clients", requireRoot, async (req, res) => {
     const clients = await Client.find({}, {
       clientId: 1,
       name: 1,
@@ -25,7 +24,7 @@ router.get("/clients", async (req, res) => {
 /* ===============================
    ROOT: CREATE NEW CLIENT
    =============================== */
-router.post("/clients/create", async (req, res) => {
+router.post("/clients/create", requireRoot, async (req, res) => {
   const { name } = req.body;
 
   const clientId =
@@ -58,7 +57,7 @@ const client = new Client({
 /* ===============================
    ROOT: FULL CLIENT DETAILS (ADMIN)
    =============================== */
-router.get("/clients/:clientId", async (req, res) => {
+router.get("/clients/:clientId", requireRoot, async (req, res) => {
   try {
     const client = await Client.findOne({ clientId: req.params.clientId });
 
@@ -75,7 +74,7 @@ router.get("/clients/:clientId", async (req, res) => {
 /* ===============================
    ROOT: UPDATE CLIENT SETTINGS
    =============================== */
-router.put("/clients/:clientId", async (req, res) => {
+router.put("/clients/:clientId", requireRoot, async (req, res) => {
   const { clientId } = req.params;
   const updates = req.body;
 
@@ -107,7 +106,7 @@ router.put("/clients/:clientId", async (req, res) => {
 /* ===============================
    ROOT: GENERATE WIDGET EMBED CODE
    =============================== */
-router.get("/clients/:clientId/widget", async (req, res) => {
+router.get("/clients/:clientId/widget", requireRoot, async (req, res) => {
   try {
     const client = await Client.findOne({ clientId: req.params.clientId });
 
@@ -135,7 +134,7 @@ router.get("/clients/:clientId/widget", async (req, res) => {
 /* ===============================
    ROOT: DELETE CLIENT
    =============================== */
-router.delete("/clients/:clientId", async (req, res) => {
+router.delete("/clients/:clientId", requireRoot, async (req, res) => {
   const { clientId } = req.params;
 
   try {
@@ -195,7 +194,7 @@ router.get("/clients/:clientId/storage", async (req, res) => {
 /* ===============================
    ROOT: VIEW CLIENT CHAT HISTORY
    =============================== */
-router.get("/clients/:clientId/messages", async (req, res) => {
+router.get("/clients/:clientId/messages", requireRoot, async (req, res) => {
   const { clientId } = req.params;
 
   try {
