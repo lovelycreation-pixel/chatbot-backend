@@ -33,10 +33,15 @@ router.post("/clients/create", async (req, res) => {
     Math.random().toString(36).slice(2, 8);
 
   try {
-    const client = new Client({
-      clientId,
-      name: name || "New Client"
-    });
+    const clientToken =
+  Math.random().toString(36).slice(2) +
+  Math.random().toString(36).slice(2);
+
+const client = new Client({
+  clientId,
+  name: name || "New Client",
+  clientToken
+});
 
     await client.save();
 
