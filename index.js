@@ -18,7 +18,7 @@ app.use(express.json());
 ====================== */
 const dashboardRoutes = require("./routes/dashboard");
 app.use("/dashboard", dashboardRoutes);
-
+app.use("/client", clientRoutes);
 /* ======================
    BASIC HEALTH CHECK
 ====================== */
