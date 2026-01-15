@@ -26,7 +26,7 @@ app.get("/", (req, res) => {
 });
 
 /* ======================
-   CHAT INTELLIGENCE (PHASE 2)
+   CHAT INTELLIGENCE (PHASE 2 + 5.3)
 ====================== */
 app.post("/chat", async (req, res) => {
   const { message, clientId } = req.body;
@@ -43,16 +43,29 @@ app.post("/chat", async (req, res) => {
     const apiKey = client.apiKey || ""; // AI switch prepared
     const fallback = client.fallback || "Sorry, I don't understand.";
 
-    // ======= SAVE USER MESSAGE =======
-    await Message.create({
-      clientId,
-      role: "user",
-      content: message,
-      size: Buffer.byteLength(message, "utf8"),
-      // Optional: calculate expiresAt here later for retention rules
-    });
+    /* ======================
+       STORAGE LIMIT CHECK
+    ====================== */
+    const usedMB = await getClientStorageUsage(clientId);
+    const limitMB = client.storageLimitMB || 100;
 
-    // ======= BASIC MODE (NO AI YET) =======
+    const canSaveHistory = usedMB < limitMB;
+
+    /* ======================
+       SAVE USER MESSAGE (if allowed)
+    ====================== */
+    if (canSaveHistory) {
+      await Message.create({
+        clientId,
+        role: "user",
+        content: message,
+        size: Buffer.byteLength(message, "utf8")
+      });
+    }
+
+    /* ======================
+       BASIC MODE (NO AI YET)
+    ====================== */
     const stopWords = [
       "is","are","am","was","the","a","an","of","to","in","on",
       "for","with","does","do","did","how","why","when"
@@ -63,7 +76,10 @@ app.post("/chat", async (req, res) => {
       .split(/\W+/)
       .filter(w => w && !stopWords.includes(w));
 
-    const sentences = adminInfo.split(/[.!?]/).map(s => s.trim()).filter(Boolean);
+    const sentences = adminInfo
+      .split(/[.!?]/)
+      .map(s => s.trim())
+      .filter(Boolean);
 
     let bestMatch = "";
     let bestScore = 0;
@@ -81,16 +97,29 @@ app.post("/chat", async (req, res) => {
 
     const reply = bestScore > 0 ? bestMatch : fallback;
 
-    // ======= SAVE BOT RESPONSE =======
-    await Message.create({
-      clientId,
-      role: "bot",
-      content: reply,
-      size: Buffer.byteLength(reply, "utf8"),
-      // Optional: calculate expiresAt for bot messages too
-    });
+    /* ======================
+       SAVE BOT MESSAGE (if allowed)
+    ====================== */
+    if (canSaveHistory) {
+      await Message.create({
+        clientId,
+        role: "bot",
+        content: reply,
+        size: Buffer.byteLength(reply, "utf8")
+      });
+    }
 
-    res.json({ reply });
+    /* ======================
+       FINAL RESPONSE
+    ====================== */
+    res.json({
+      reply,
+      meta: {
+        historySaved: canSaveHistory,
+        storageUsedMB: usedMB,
+        storageLimitMB: limitMB
+      }
+    });
 
   } catch (err) {
     console.error("Chat error:", err);
