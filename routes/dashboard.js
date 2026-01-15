@@ -145,8 +145,8 @@ router.delete("/clients/:clientId", async (req, res) => {
 });
 
 /* ===============================
-   ROOT: STORAGE USAGE PER CLIENT
-   =============================== */
+   ROOT: STORAGE USAGE (VISUAL READY)
+=============================== */
 router.get("/clients/:clientId/storage", async (req, res) => {
   const { clientId } = req.params;
 
@@ -160,14 +160,30 @@ router.get("/clients/:clientId/storage", async (req, res) => {
     const usedMB = +(usedBytes / (1024 * 1024)).toFixed(2);
 
     const client = await Client.findOne({ clientId });
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
+
+    const limitMB = client.storageLimitMB || 100;
+    const remainingMB = +(limitMB - usedMB).toFixed(2);
+    const usedPercent = +((usedMB / limitMB) * 100).toFixed(1);
+
+    let status = "green";
+    if (usedPercent >= 80) status = "warning";
+    if (usedPercent >= 100) status = "danger";
 
     res.json({
+      clientId,
       usedMB,
-      limitMB: client.storageLimitMB
+      limitMB,
+      remainingMB,
+      usedPercent,
+      status,
+      historyPaused: usedMB >= limitMB
     });
 
   } catch (err) {
-    res.status(500).json({ error: "Storage check failed" });
+    res.status(500).json({ error: "Storage calculation failed" });
   }
 });
 
