@@ -1,11 +1,23 @@
+// ===============================
+// DASHBOARD ROUTES
+// ===============================
+
+// 1️⃣ Load environment variables first
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "dev-admin-secret";
+
+// 2️⃣ Core imports
 const express = require("express");
 const router = express.Router();
+
+// 3️⃣ Models
 const Client = require("../models/Client");
 const Message = require("../models/Message");
+
+// 4️⃣ Middleware (if you have custom auth)
 const { requireRoot } = require("../middleware/auth");
 
-
+// 5️⃣ ADMIN AUTH MIDDLEWARE
+// All routes after this will require the admin token
 router.use((req, res, next) => {
   const token = req.headers["x-admin-token"];
   if (token !== ADMIN_TOKEN) {
@@ -13,6 +25,15 @@ router.use((req, res, next) => {
   }
   next();
 });
+
+// 6️⃣ ROUTES START HERE
+// Example: minimal test route
+router.get("/test", (req, res) => {
+  res.json({ ok: true });
+});
+
+// 7️⃣ EXPORT THE ROUTER
+module.exports = router;
 /* ===============================
    ROOT: LIST ALL CLIENTS (SAFE LIST)
    =============================== */
