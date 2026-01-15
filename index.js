@@ -1,24 +1,32 @@
+/* ======================
+   IMPORTS
+====================== */
 const express = require("express");
-const clientRoutes = require("./routes/client");
 const cors = require("cors");
 const mongoose = require("mongoose");
 const Client = require("./models/Client");
 const Message = require("./models/Message");
 
-const app = express();
+// Dashboard and client routes
+const dashboardRoutes = require("./routes/dashboard");
+const clientRoutes = require("./routes/client");
+
+// Storage utility
+const { getClientStorageUsage } = require("./utils/storage");
 
 /* ======================
-   MIDDLEWARE
+   APP INIT
 ====================== */
+const app = express();
 app.use(cors());
 app.use(express.json());
 
 /* ======================
-   DASHBOARD ROUTES
+   DASHBOARD & CLIENT ROUTES
 ====================== */
-const dashboardRoutes = require("./routes/dashboard");
 app.use("/dashboard", dashboardRoutes);
 app.use("/client", clientRoutes);
+
 /* ======================
    BASIC HEALTH CHECK
 ====================== */
