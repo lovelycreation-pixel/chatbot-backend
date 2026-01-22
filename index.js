@@ -7,7 +7,9 @@ const mongoose = require("mongoose");
 const Client = require("./models/Client");
 const Message = require("./models/Message");
 
-// Default dev admin tokens (replace with env if needed)
+// ======================
+// DEV ADMIN TOKENS
+// ======================
 const DEV_ADMIN_TOKENS = [
   process.env.ADMIN_TOKEN || "dev-admin-1",
   process.env.ADMIN_TOKEN_2 || "dev-admin-2",
@@ -34,7 +36,6 @@ app.use(express.json());
 
 // ======================
 // UTILITY: STORAGE USAGE
-// Placeholder function
 // ======================
 async function getClientStorageUsage(clientId) {
   const messages = await Message.find({ clientId });
@@ -43,8 +44,10 @@ async function getClientStorageUsage(clientId) {
 }
 
 // ======================
-// DASHBOARD ROUTES
+// DASHBOARD ENDPOINTS
 // ======================
+
+// List all clients
 app.get("/dashboard/clients", requireAdmin, async (req, res) => {
   try {
     const clients = await Client.find().lean();
@@ -55,6 +58,7 @@ app.get("/dashboard/clients", requireAdmin, async (req, res) => {
   }
 });
 
+// Get single client details
 app.get("/dashboard/clients/:clientId", requireAdmin, async (req, res) => {
   try {
     const client = await Client.findOne({ clientId: req.params.clientId }).lean();
@@ -66,8 +70,9 @@ app.get("/dashboard/clients/:clientId", requireAdmin, async (req, res) => {
   }
 });
 
+// Create new client
 app.post("/dashboard/clients/create", requireAdmin, async (req, res) => {
-  const { name } = req.body;
+  const { name, storageLimitMB = 100, tokens = 0, domain = "" } = req.body;
   if (!name) return res.status(400).json({ error: "Client name required" });
 
   const clientId =
@@ -78,22 +83,62 @@ app.post("/dashboard/clients/create", requireAdmin, async (req, res) => {
       clientId,
       name,
       adminInfo: "",
-      apiKey: "",
+      apiKey: "",      // Shared API key (hidden)
       fallback: "Sorry, I don't understand.",
-      storageLimitMB: 100
+      storageLimitMB,
+      tokens,
+      domain
     });
 
     await client.save();
-    res.json({ clientId, name });
+    res.json({ clientId, name, storageLimitMB, tokens, domain });
   } catch (err) {
     console.error("Create client error:", err);
     res.status(500).json({ error: "Failed to create client" });
   }
 });
 
+// Update client (edit via pop-up)
+app.patch("/dashboard/clients/:clientId", requireAdmin, async (req, res) => {
+  const updates = {};
+  const allowedFields = ["name", "storageLimitMB", "tokens", "domain"];
+  allowedFields.forEach(f => {
+    if (req.body[f] !== undefined) updates[f] = req.body[f];
+  });
+
+  try {
+    const client = await Client.findOneAndUpdate(
+      { clientId: req.params.clientId },
+      { $set: updates },
+      { new: true }
+    );
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    res.json(client);
+  } catch (err) {
+    console.error("Update client error:", err);
+    res.status(500).json({ error: "Failed to update client" });
+  }
+});
+
+// Delete client
+app.delete("/dashboard/clients/:clientId", requireAdmin, async (req, res) => {
+  try {
+    const client = await Client.findOneAndDelete({ clientId: req.params.clientId });
+    if (!client) return res.status(404).json({ error: "Client not found" });
+    // Optionally: delete all messages for this client
+    await Message.deleteMany({ clientId: req.params.clientId });
+    res.json({ message: "Client deleted successfully" });
+  } catch (err) {
+    console.error("Delete client error:", err);
+    res.status(500).json({ error: "Failed to delete client" });
+  }
+});
+
 // ======================
-// CLIENT ROUTES
+// CLIENT ENDPOINTS
 // ======================
+
+// Register client (public)
 app.post("/client/register", async (req, res) => {
   const { name } = req.body;
   const clientId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -103,9 +148,11 @@ app.post("/client/register", async (req, res) => {
       clientId,
       name: name || "New Client",
       adminInfo: "",
-      apiKey: "",
+      apiKey: "",      // Shared API key
       fallback: "Sorry, I don't understand.",
-      storageLimitMB: 100
+      storageLimitMB: 100,
+      tokens: 0,
+      domain: ""
     });
     await client.save();
     res.json({ clientId, name: client.name });
@@ -115,6 +162,9 @@ app.post("/client/register", async (req, res) => {
   }
 });
 
+// ======================
+// CHAT ENDPOINT
+// ======================
 app.post("/chat", async (req, res) => {
   const { message, clientId } = req.body;
   if (!clientId) return res.json({ reply: "Client ID missing" });
@@ -158,7 +208,15 @@ app.post("/chat", async (req, res) => {
       await Message.create({ clientId, role: "bot", content: reply, size: Buffer.byteLength(reply, "utf8") });
     }
 
-    res.json({ reply, meta: { historySaved: canSaveHistory, storageUsedMB: usedMB, storageLimitMB: limitMB } });
+    res.json({
+      reply,
+      meta: {
+        historySaved: canSaveHistory,
+        storageUsedMB: usedMB,
+        storageLimitMB: limitMB,
+        tokensRemaining: client.tokens // Include token balance
+      }
+    });
   } catch (err) {
     console.error("Chat error:", err);
     res.json({ reply: "Server error. Please try again." });
