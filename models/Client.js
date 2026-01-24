@@ -42,8 +42,17 @@ const ClientSchema = new mongoose.Schema({
   avatar: {
     type: String,
     default: ""
-  }
+  },
 
+  botName: {
+    type: String,
+    default: "Chatbot"
+  },
+
+  widgetCode: {
+    type: String,
+    default: ""
+  }
 });
 
 module.exports = mongoose.model("Client", ClientSchema);
