@@ -25,11 +25,32 @@ function requireAdmin(req, res, next) {
 // STORAGE CALCULATION
 // ======================
 async function getUsage(clientId) {
+  const client = await Client.findOne({ clientId }).lean();
+  if (!client) {
+    return { usedMB: 0, messageCount: 0 };
+  }
+
   const messages = await Message.find({ clientId }).lean();
-  const bytes = messages.reduce((a, m) => a + (m.size || 0), 0);
+
+  const messageBytes = messages.reduce(
+    (a, m) => a + (m.size || 0),
+    0
+  );
+
+  const adminInfoBytes = Buffer.byteLength(client.adminInfo || "", "utf8");
+  const botNameBytes = Buffer.byteLength(client.botName || "", "utf8");
+  const avatarBytes = Buffer.byteLength(client.avatar || "", "utf8");
+  const widgetBytes = Buffer.byteLength(client.widgetCode || "", "utf8");
+
+  const totalBytes =
+    messageBytes +
+    adminInfoBytes +
+    botNameBytes +
+    avatarBytes +
+    widgetBytes;
 
   return {
-    usedMB: +(bytes / (1024 * 1024)).toFixed(2),
+    usedMB: bytesToMB(totalBytes),
     messageCount: messages.length
   };
 }
