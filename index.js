@@ -8,25 +8,20 @@ const Client = require("./models/Client");
 const Message = require("./models/Message");
 const motherDashboardRoutes = require("./dashboard/motherDashboard");
 // ======================
-// DEV ADMIN TOKENS
+// ADMIN TOKEN
 // ======================
-const DEV_ADMIN_TOKENS = [
-  process.env.ADMIN_TOKEN || "dev-admin-1",
-  process.env.ADMIN_TOKEN_2 || "dev-admin-2",
-  process.env.ADMIN_TOKEN_3 || "dev-admin-3"
-];
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "mother-dashboard-secret";
 
 // ======================
 // MIDDLEWARE: ADMIN AUTH
 // ======================
 function requireAdmin(req, res, next) {
   const token = req.headers["x-admin-token"];
-  if (!token || !DEV_ADMIN_TOKENS.includes(token)) {
-    return res.status(401).json({ error: "Unauthorized" });
+  if (!token || token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: "Invalid admin token" });
   }
   next();
 }
-
 // ======================
 // APP INIT
 // ======================
