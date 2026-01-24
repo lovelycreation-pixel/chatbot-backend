@@ -6,7 +6,7 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const Client = require("./models/Client");
 const Message = require("./models/Message");
-
+const motherDashboardRoutes = require("./dashboard/motherDashboard");
 // ======================
 // DEV ADMIN TOKENS
 // ======================
