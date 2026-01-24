@@ -28,6 +28,7 @@ function requireAdmin(req, res, next) {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/dashboard", motherDashboardRoutes);
 
 // ======================
 // UTILITY: STORAGE USAGE
