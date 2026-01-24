@@ -3,6 +3,10 @@ const router = express.Router();
 const Client = require("../models/Client");
 const Message = require("../models/Message");
 
+function bytesToMB(bytes) {
+  return +(bytes / (1024 * 1024)).toFixed(2);
+}
+
 // ======================
 // ADMIN AUTH
 // ======================
@@ -15,6 +19,7 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
 
 // ======================
 // STORAGE CALCULATION
