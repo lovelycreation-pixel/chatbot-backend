@@ -70,6 +70,38 @@ router.get("/clients/:clientId", requireAdmin, async (req, res) => {
 });
 
 // ======================
+// CREATE CLIENT
+// ======================
+router.post("/clients", requireAdmin, async (req, res) => {
+  const { name, storageLimitMB = 100, tokens = 0, domain = "" } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ error: "Client name required" });
+  }
+
+  const clientId =
+    Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+
+  try {
+    const client = new Client({
+      clientId,
+      name,
+      adminInfo: "",
+      fallback: "Sorry, I don't understand.",
+      storageLimitMB,
+      tokens,
+      domain
+    });
+
+    await client.save();
+    res.json(client);
+  } catch (err) {
+    console.error("Create client error:", err);
+    res.status(500).json({ error: "Failed to create client" });
+  }
+});
+
+// ======================
 // UPDATE CLIENT (EDIT POPUP)
 // ======================
 router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
