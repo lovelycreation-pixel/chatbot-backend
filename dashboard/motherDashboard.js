@@ -1,8 +1,20 @@
 const express = require("express");
+const router = express.Router();
 const Client = require("../models/Client");
 const Message = require("../models/Message");
 
-const router = express.Router();
+// ======================
+// ADMIN AUTH
+// ======================
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || "mother-dashboard-secret";
+
+function requireAdmin(req, res, next) {
+  const token = req.headers["x-admin-token"];
+  if (!token || token !== ADMIN_TOKEN) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
+}
 
 // ======================
 // STORAGE CALCULATION
@@ -18,9 +30,9 @@ async function getUsage(clientId) {
 }
 
 // ======================
-// LIST ALL CLIENTS (FOR MOTHER DASHBOARD)
+// LIST ALL CLIENTS (MOTHER DASHBOARD)
 // ======================
-router.get("/clients", async (req, res) => {
+router.get("/clients", requireAdmin, async (req, res) => {
   try {
     const clients = await Client.find().lean();
 
@@ -31,6 +43,8 @@ router.get("/clients", async (req, res) => {
           clientId: c.clientId,
           name: c.name,
           domain: c.domain || "",
+          adminInfo: c.adminInfo || "",
+          fallback: c.fallback || "",
           storageLimitMB: c.storageLimitMB || 100,
           storageUsedMB: usage.usedMB,
           messageCount: usage.messageCount,
@@ -47,13 +61,36 @@ router.get("/clients", async (req, res) => {
 });
 
 // ======================
+// GET SINGLE CLIENT
+// ======================
+router.get("/clients/:clientId", requireAdmin, async (req, res) => {
+  const client = await Client.findOne({ clientId: req.params.clientId }).lean();
+  if (!client) return res.status(404).json({ error: "Client not found" });
+  res.json(client);
+});
+
+// ======================
 // UPDATE CLIENT (EDIT POPUP)
 // ======================
-router.patch("/clients/:clientId", async (req, res) => {
+router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
+  const allowedFields = [
+    "name",
+    "adminInfo",
+    "fallback",
+    "storageLimitMB",
+    "tokens",
+    "domain"
+  ];
+
+  const updates = {};
+  allowedFields.forEach(f => {
+    if (req.body[f] !== undefined) updates[f] = req.body[f];
+  });
+
   try {
     const client = await Client.findOneAndUpdate(
       { clientId: req.params.clientId },
-      { $set: req.body },
+      { $set: updates },
       { new: true }
     );
 
@@ -71,7 +108,7 @@ router.patch("/clients/:clientId", async (req, res) => {
 // ======================
 // DELETE CLIENT
 // ======================
-router.delete("/clients/:clientId", async (req, res) => {
+router.delete("/clients/:clientId", requireAdmin, async (req, res) => {
   try {
     await Client.deleteOne({ clientId: req.params.clientId });
     await Message.deleteMany({ clientId: req.params.clientId });
