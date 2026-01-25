@@ -21,7 +21,6 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-
 // ======================
 // STORAGE CALCULATION
 // ======================
@@ -33,22 +32,14 @@ async function getUsage(clientId) {
 
   const messages = await Message.find({ clientId }).lean();
 
-  const messageBytes = messages.reduce(
-    (a, m) => a + (m.size || 0),
-    0
-  );
-
+  const messageBytes = messages.reduce((a, m) => a + (m.size || 0), 0);
   const adminInfoBytes = Buffer.byteLength(client.adminInfo || "", "utf8");
   const botNameBytes = Buffer.byteLength(client.botName || "", "utf8");
   const avatarBytes = Buffer.byteLength(client.avatar || "", "utf8");
   const widgetBytes = Buffer.byteLength(client.widgetCode || "", "utf8");
 
   const totalBytes =
-    messageBytes +
-    adminInfoBytes +
-    botNameBytes +
-    avatarBytes +
-    widgetBytes;
+    messageBytes + adminInfoBytes + botNameBytes + avatarBytes + widgetBytes;
 
   return {
     usedMB: bytesToMB(totalBytes),
@@ -75,7 +66,8 @@ router.get("/clients", requireAdmin, async (req, res) => {
           storageLimitMB: c.storageLimitMB || 100,
           storageUsedMB: usage.usedMB,
           messageCount: usage.messageCount,
-          tokens: c.tokens || 0
+          tokens: c.tokens || 0,
+          widgetCode: c.widgetCode || "" // <-- Phase 2.5: include widgetCode
         };
       })
     );
@@ -119,9 +111,14 @@ router.post("/clients", requireAdmin, async (req, res) => {
       tokens,
       domain
     });
+
+    // ----------- PHASE 2.5: GENERATE WIDGET CODE -----------
     client.widgetCode = generateWidgetCode(client);
+
+    // Save client with widgetCode
     await client.save();
-    await client.save();
+
+    // Return the client including widgetCode
     res.json(client);
   } catch (err) {
     console.error("Create client error:", err);
@@ -148,47 +145,40 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
   });
 
   const client = await Client.findOne({ clientId: req.params.clientId });
-if (!client) return res.status(404).json({ error: "Client not found" });
+  if (!client) return res.status(404).json({ error: "Client not found" });
 
-const currentUsage = await getUsage(client.clientId);
-const limitMB = client.storageLimitMB || 1024;
+  const currentUsage = await getUsage(client.clientId);
+  const limitMB = client.storageLimitMB || 1024;
 
-// Calculate incoming size (only changed fields)
-let incomingBytes = 0;
+  // Calculate incoming size (only changed fields)
+  let incomingBytes = 0;
+  if (updates.adminInfo) incomingBytes += Buffer.byteLength(updates.adminInfo, "utf8");
+  if (updates.name) incomingBytes += Buffer.byteLength(updates.name, "utf8");
+  if (updates.avatar) incomingBytes += Buffer.byteLength(updates.avatar, "utf8");
 
-if (updates.adminInfo) {
-  incomingBytes += Buffer.byteLength(updates.adminInfo, "utf8");
-}
-if (updates.name) {
-  incomingBytes += Buffer.byteLength(updates.name, "utf8");
-}
-if (updates.avatar) {
-  incomingBytes += Buffer.byteLength(updates.avatar, "utf8");
-}
+  // Convert to MB
+  const incomingMB = incomingBytes / (1024 * 1024);
 
-// Convert to MB
-const incomingMB = incomingBytes / (1024 * 1024);
-
-if (currentUsage.usedMB + incomingMB > limitMB) {
-  return res.status(400).json({
-    error: "Storage limit exceeded",
-    usedMB: currentUsage.usedMB,
-    limitMB
-  });
-}
+  if (currentUsage.usedMB + incomingMB > limitMB) {
+    return res.status(400).json({
+      error: "Storage limit exceeded",
+      usedMB: currentUsage.usedMB,
+      limitMB
+    });
+  }
 
   try {
-    const client = await Client.findOneAndUpdate(
+    const updatedClient = await Client.findOneAndUpdate(
       { clientId: req.params.clientId },
       { $set: updates },
       { new: true }
     );
 
-    if (!client) {
+    if (!updatedClient) {
       return res.status(404).json({ error: "Client not found" });
     }
 
-    res.json(client);
+    res.json(updatedClient);
   } catch (err) {
     console.error("Update client error:", err);
     res.status(500).json({ error: "Failed to update client" });
