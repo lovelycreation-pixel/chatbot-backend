@@ -119,7 +119,8 @@ router.post("/clients", requireAdmin, async (req, res) => {
       tokens,
       domain
     });
-
+    client.widgetCode = generateWidgetCode(client);
+    await client.save();
     await client.save();
     res.json(client);
   } catch (err) {
