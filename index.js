@@ -148,7 +148,11 @@ res.json({
     tokensRemaining: client.tokens
   }
 });
-
+} catch (err) {
+    console.error("Chat error:", err);
+    res.json({ reply: "Server error. Please try again." });
+  }
+});
 // ======================
 // HEALTH CHECK
 // ======================
