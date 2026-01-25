@@ -54,7 +54,29 @@ router.get("/config/:clientId", async (req, res) => {
 });
 
 /* ======================
-   EXPORTS (IMPORTANT)
+   EXPORTS
 ====================== */
-router.generateWidgetCode = generateWidgetCode;
-module.exports = router;
+function generateWidgetCode(client) {
+  return `<script>
+(function(){
+  const clientId = "${client.clientId}";
+  const allowedDomain = "${client.domain || ""}";
+  if (allowedDomain && !location.hostname.includes(allowedDomain)) return;
+
+  const iframe = document.createElement("iframe");
+  iframe.src = "https://your-domain/widget-ui.html?clientId=" + clientId;
+  iframe.style.position = "fixed";
+  iframe.style.bottom = "20px";
+  iframe.style.right = "20px";
+  iframe.style.width = "360px";
+  iframe.style.height = "520px";
+  iframe.style.border = "none";
+  iframe.style.zIndex = "999999";
+
+  document.body.appendChild(iframe);
+})();
+</script>`;
+}
+
+// Export both router (for /config) and generator function
+module.exports = { router, generateWidgetCode };
