@@ -26,9 +26,7 @@ function requireAdmin(req, res, next) {
 // ======================
 async function getUsage(clientId) {
   const client = await Client.findOne({ clientId }).lean();
-  if (!client) {
-    return { usedMB: 0, messageCount: 0 };
-  }
+  if (!client) return { usedMB: 0, messageCount: 0 };
 
   const messages = await Message.find({ clientId }).lean();
 
@@ -48,7 +46,7 @@ async function getUsage(clientId) {
 }
 
 // ======================
-// LIST ALL CLIENTS (MOTHER DASHBOARD)
+// LIST ALL CLIENTS
 // ======================
 router.get("/clients", requireAdmin, async (req, res) => {
   try {
@@ -67,7 +65,7 @@ router.get("/clients", requireAdmin, async (req, res) => {
           storageUsedMB: usage.usedMB,
           messageCount: usage.messageCount,
           tokens: c.tokens || 0,
-          widgetCode: c.widgetCode || "" // <-- Phase 2.5: include widgetCode
+          widgetCode: c.widgetCode || "" // ✅ Include widgetCode here
         };
       })
     );
@@ -85,7 +83,12 @@ router.get("/clients", requireAdmin, async (req, res) => {
 router.get("/clients/:clientId", requireAdmin, async (req, res) => {
   const client = await Client.findOne({ clientId: req.params.clientId }).lean();
   if (!client) return res.status(404).json({ error: "Client not found" });
-  res.json(client);
+
+  // ✅ Include widgetCode for the single client
+  res.json({
+    ...client,
+    widgetCode: client.widgetCode || ""
+  });
 });
 
 // ======================
@@ -94,9 +97,7 @@ router.get("/clients/:clientId", requireAdmin, async (req, res) => {
 router.post("/clients", requireAdmin, async (req, res) => {
   const { name, storageLimitMB = 100, tokens = 0, domain = "" } = req.body;
 
-  if (!name) {
-    return res.status(400).json({ error: "Client name required" });
-  }
+  if (!name) return res.status(400).json({ error: "Client name required" });
 
   const clientId =
     Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -112,13 +113,10 @@ router.post("/clients", requireAdmin, async (req, res) => {
       domain
     });
 
-    // ----------- PHASE 2.5: GENERATE WIDGET CODE -----------
+    // Generate widget code
     client.widgetCode = generateWidgetCode(client);
 
-    // Save client with widgetCode
     await client.save();
-
-    // Return the client including widgetCode
     res.json(client);
   } catch (err) {
     console.error("Create client error:", err);
@@ -127,7 +125,7 @@ router.post("/clients", requireAdmin, async (req, res) => {
 });
 
 // ======================
-// UPDATE CLIENT (EDIT POPUP)
+// UPDATE CLIENT
 // ======================
 router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
   const allowedFields = [
@@ -150,13 +148,12 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
   const currentUsage = await getUsage(client.clientId);
   const limitMB = client.storageLimitMB || 1024;
 
-  // Calculate incoming size (only changed fields)
+  // Calculate incoming size
   let incomingBytes = 0;
   if (updates.adminInfo) incomingBytes += Buffer.byteLength(updates.adminInfo, "utf8");
   if (updates.name) incomingBytes += Buffer.byteLength(updates.name, "utf8");
   if (updates.avatar) incomingBytes += Buffer.byteLength(updates.avatar, "utf8");
 
-  // Convert to MB
   const incomingMB = incomingBytes / (1024 * 1024);
 
   if (currentUsage.usedMB + incomingMB > limitMB) {
@@ -174,9 +171,7 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
       { new: true }
     );
 
-    if (!updatedClient) {
-      return res.status(404).json({ error: "Client not found" });
-    }
+    if (!updatedClient) return res.status(404).json({ error: "Client not found" });
 
     res.json(updatedClient);
   } catch (err) {
