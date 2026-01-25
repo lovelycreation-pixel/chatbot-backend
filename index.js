@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const Client = require("./models/Client");
 const Message = require("./models/Message");
 const motherDashboardRoutes = require("./dashboard/motherDashboard");
+const widgetRoutes = require("./routes/widget");
 // ======================
 // ADMIN TOKEN
 // ======================
@@ -29,7 +30,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use("/dashboard", motherDashboardRoutes);
-
+app.use("/widget", widgetRoutes);
 // ======================
 // UTILITY: STORAGE USAGE
 // ======================
