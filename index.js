@@ -106,27 +106,46 @@ app.post("/chat", async (req, res) => {
     const reply = bestScore > 0 ? bestMatch : fallback;
 
     // Save messages if under storage limit
-    const usedMB = await getClientStorageUsage(clientId);
-    const limitMB = client.storageLimitMB || 100;
-    const canSaveHistory = usedMB < limitMB;
+const usedMB = await getClientStorageUsage(clientId);
+const limitMB = client.storageLimitMB || 100;
+const canSaveHistory = usedMB < limitMB;
 
-    if (canSaveHistory) {
-      await Message.create({ clientId, role: "user", content: message, size: Buffer.byteLength(message, "utf8") });
-      await Message.create({ clientId, role: "bot", content: reply, size: Buffer.byteLength(reply, "utf8") });
+// 🚫 STORAGE FULL → DO NOT SAVE
+if (!canSaveHistory) {
+  return res.json({
+    reply,
+    meta: {
+      historySaved: false,
+      storageUsedMB: usedMB,
+      storageLimitMB: limitMB,
+      storageFull: true
     }
+  });
+}
 
-    res.json({
-      reply,
-      meta: {
-        historySaved: canSaveHistory,
-        storageUsedMB: usedMB,
-        storageLimitMB: limitMB,
-        tokensRemaining: client.tokens // Include token balance
-      }
-    });
-  } catch (err) {
-    console.error("Chat error:", err);
-    res.json({ reply: "Server error. Please try again." });
+// ✅ SAFE TO SAVE
+await Message.create({
+  clientId,
+  role: "user",
+  content: message,
+  size: Buffer.byteLength(message, "utf8")
+});
+
+await Message.create({
+  clientId,
+  role: "bot",
+  content: reply,
+  size: Buffer.byteLength(reply, "utf8")
+});
+
+// Normal response
+res.json({
+  reply,
+  meta: {
+    historySaved: true,
+    storageUsedMB: usedMB,
+    storageLimitMB: limitMB,
+    tokensRemaining: client.tokens
   }
 });
 
