@@ -54,9 +54,7 @@ router.get("/config/:clientId", async (req, res) => {
 });
 
 /* ======================
-   EXPORTS
+   EXPORTS (IMPORTANT)
 ====================== */
-module.exports = {
-  router,
-  generateWidgetCode
-};
+router.generateWidgetCode = generateWidgetCode;
+module.exports = router;
