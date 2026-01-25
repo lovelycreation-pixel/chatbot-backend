@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Client = require("../models/Client");
 const Message = require("../models/Message");
+const { generateWidgetCode } = require("../routes/widget");
 
 function bytesToMB(bytes) {
   return +(bytes / (1024 * 1024)).toFixed(2);
