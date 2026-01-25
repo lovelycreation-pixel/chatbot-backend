@@ -145,6 +145,36 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
     if (req.body[f] !== undefined) updates[f] = req.body[f];
   });
 
+  const client = await Client.findOne({ clientId: req.params.clientId });
+if (!client) return res.status(404).json({ error: "Client not found" });
+
+const currentUsage = await getUsage(client.clientId);
+const limitMB = client.storageLimitMB || 1024;
+
+// Calculate incoming size (only changed fields)
+let incomingBytes = 0;
+
+if (updates.adminInfo) {
+  incomingBytes += Buffer.byteLength(updates.adminInfo, "utf8");
+}
+if (updates.name) {
+  incomingBytes += Buffer.byteLength(updates.name, "utf8");
+}
+if (updates.avatar) {
+  incomingBytes += Buffer.byteLength(updates.avatar, "utf8");
+}
+
+// Convert to MB
+const incomingMB = incomingBytes / (1024 * 1024);
+
+if (currentUsage.usedMB + incomingMB > limitMB) {
+  return res.status(400).json({
+    error: "Storage limit exceeded",
+    usedMB: currentUsage.usedMB,
+    limitMB
+  });
+}
+
   try {
     const client = await Client.findOneAndUpdate(
       { clientId: req.params.clientId },
