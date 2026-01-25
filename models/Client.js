@@ -52,7 +52,24 @@ const ClientSchema = new mongoose.Schema({
   widgetCode: {
     type: String,
     default: ""
-  }
+  },
+
+  widgetCode: {
+  type: String,
+  default: ""
+},
+botName: {
+  type: String,
+  default: "Chatbot"
+},
+avatar: {
+  type: String,
+  default: ""
+},
+retentionDays: {
+  type: Number,
+  default: 30
+}
 });
 
 module.exports = mongoose.model("Client", ClientSchema);
