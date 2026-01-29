@@ -12,8 +12,7 @@ function generateWidgetCode(client) {
   const allowedDomain = "${client.domain || ""}";
   if (allowedDomain && !location.hostname.includes(allowedDomain)) return;
 
-  const iframe = document.createElement("iframe");
-  iframe.src = "https://your-domain/widget-ui.html?clientId=" + clientId;
+  iframe.src = "https://chatbot-backend-gjcv.onrender.com/widget-ui.html?clientId=" + clientId;
   iframe.style.position = "fixed";
   iframe.style.bottom = "20px";
   iframe.style.right = "20px";
