@@ -94,25 +94,17 @@ router.get("/clients/:clientId", requireAdmin, async (req, res) => {
 // ======================
 // CREATE CLIENT
 // ======================
-router.post("/clients", requireAdmin, async (req, res) => {
-  const { name, storageLimitMB = 100, tokens = 0, domain = "" } = req.body;
-
-  if (!name) return res.status(400).json({ error: "Client name required" });
-
-  const clientId =
-    Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
-
-  try {
-    const client = new Client({
-      clientId,
-      name,
-      adminInfo: "",
-      fallback: "Sorry, I don't understand.",
-      storageLimitMB,
-      tokens,
-      domain
-    });
-
+const client = new Client({
+  clientId,
+  name,
+  adminInfo: req.body.adminInfo || "",
+  fallback: req.body.fallback || "Sorry, I don't understand.",
+  storageLimitMB,
+  tokens,
+  domain,
+  botName: req.body.botName || name, // set botName to client name initially
+  avatar: req.body.avatar || ""
+});
     // Generate widget code
     client.widgetCode = generateWidgetCode(client);
 
