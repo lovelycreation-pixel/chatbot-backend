@@ -31,6 +31,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/dashboard", motherDashboardRoutes);
 app.use("/widget", widgetRoutes);
+app.use(express.static("public"));
 // ======================
 // UTILITY: STORAGE USAGE
 // ======================
