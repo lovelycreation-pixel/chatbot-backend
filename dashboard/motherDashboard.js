@@ -134,7 +134,9 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
     "fallback",
     "storageLimitMB",
     "tokens",
-    "domain"
+    "domain",
+    "botName",
+    "avatar"
   ];
 
   const updates = {};
@@ -142,44 +144,44 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
     if (req.body[f] !== undefined) updates[f] = req.body[f];
   });
 
-  const client = await Client.findOne({ clientId: req.params.clientId });
-  if (!client) return res.status(404).json({ error: "Client not found" });
-
-  const currentUsage = await getUsage(client.clientId);
-  const limitMB = client.storageLimitMB || 1024;
-
-  // Calculate incoming size
-  let incomingBytes = 0;
-  if (updates.adminInfo) incomingBytes += Buffer.byteLength(updates.adminInfo, "utf8");
-  if (updates.name) incomingBytes += Buffer.byteLength(updates.name, "utf8");
-  if (updates.avatar) incomingBytes += Buffer.byteLength(updates.avatar, "utf8");
-
-  const incomingMB = incomingBytes / (1024 * 1024);
-
-  if (currentUsage.usedMB + incomingMB > limitMB) {
-    return res.status(400).json({
-      error: "Storage limit exceeded",
-      usedMB: currentUsage.usedMB,
-      limitMB
-    });
-  }
-
   try {
-    const updatedClient = await Client.findOneAndUpdate(
-      { clientId: req.params.clientId },
-      { $set: updates },
-      { new: true }
-    );
+    const client = await Client.findOne({ clientId: req.params.clientId });
+    if (!client) {
+      return res.status(404).json({ error: "Client not found" });
+    }
 
-    if (!updatedClient) return res.status(404).json({ error: "Client not found" });
+    const currentUsage = await getUsage(client.clientId);
+    const limitMB = client.storageLimitMB || 1024;
 
-    res.json(updatedClient);
+    let incomingBytes = 0;
+    if (updates.adminInfo) incomingBytes += Buffer.byteLength(updates.adminInfo, "utf8");
+    if (updates.name) incomingBytes += Buffer.byteLength(updates.name, "utf8");
+    if (updates.avatar) incomingBytes += Buffer.byteLength(updates.avatar, "utf8");
+
+    const incomingMB = incomingBytes / (1024 * 1024);
+
+    if (currentUsage.usedMB + incomingMB > limitMB) {
+      return res.status(400).json({
+        error: "Storage limit exceeded",
+        usedMB: currentUsage.usedMB,
+        limitMB
+      });
+    }
+
+    // ✅ APPLY UPDATES MANUALLY
+    Object.assign(client, updates);
+
+    // 🔥 REGENERATE WIDGET CODE (THIS WAS MISSING)
+    client.widgetCode = generateWidgetCode(client);
+
+    await client.save();
+
+    res.json(client);
   } catch (err) {
     console.error("Update client error:", err);
     res.status(500).json({ error: "Failed to update client" });
   }
 });
-
 // ======================
 // DELETE CLIENT
 // ======================
