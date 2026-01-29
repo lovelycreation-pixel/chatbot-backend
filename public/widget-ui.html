@@ -31,7 +31,7 @@
       .then(r => r.json())
       .then(cfg => {
         document.getElementById("info").innerText =
-          "Client: " + (cfg.botName || clientId);
+  "Client: " + (cfg.name || cfg.botName || clientId);
       })
       .catch(() => {
         document.getElementById("info").innerText = "Config load failed";
