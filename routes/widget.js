@@ -46,7 +46,15 @@ router.get("/config/:clientId", async (req, res) => {
       return res.status(404).json({ error: "Invalid client" });
     }
 
-    res.json(client);
+    res.json({
+  clientId: client.clientId,
+  name: client.name,
+  botName: client.botName,
+  avatar: client.avatar,
+  fallback: client.fallback,
+  domain: client.domain,
+  tokens: client.tokens
+});
   } catch (err) {
     console.error("Widget config error:", err);
     res.status(500).json({ error: "Server error" });
