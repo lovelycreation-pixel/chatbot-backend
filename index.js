@@ -29,6 +29,7 @@ function requireAdmin(req, res, next) {
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static("public"));
 app.use("/dashboard", motherDashboardRoutes);
 app.use("/widget", widgetRoutes);
 app.use(express.static("public"));
