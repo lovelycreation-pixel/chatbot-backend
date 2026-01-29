@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Chat Widget</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+    }
+    .box {
+      padding: 12px;
+      background: white;
+      height: 100vh;
+      box-sizing: border-box;
+    }
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h4>Chatbot Loaded ✅</h4>
+    <p id="info">Loading...</p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const clientId = params.get("clientId");
+
+    fetch("/widget/config/" + clientId)
+      .then(r => r.json())
+      .then(cfg => {
+        document.getElementById("info").innerText =
+          "Client: " + (cfg.botName || clientId);
+      })
+      .catch(() => {
+        document.getElementById("info").innerText = "Config load failed";
+      });
+  </script>
+</body>
+</html>
