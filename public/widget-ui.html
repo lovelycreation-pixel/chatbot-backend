@@ -1,9 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Chat Widget</title>
-
   <style>
     html, body {
       margin: 0;
@@ -12,63 +11,43 @@
       font-family: Arial, sans-serif;
       background: #f9f9f9;
     }
-
     .box {
       padding: 12px;
-      background: #ffffff;
+      background: #fff;
       height: 100%;
       box-sizing: border-box;
     }
-
-    h4 {
-      margin: 0 0 8px 0;
-      font-size: 14px;
-    }
-
-    p {
-      margin: 0;
-      font-size: 13px;
-      color: #333333;
-      word-break: break-word;
-    }
+    h4 { margin: 0 0 8px 0; font-size: 14px; }
+    p { margin: 0; font-size: 13px; color: #333; word-break: break-word; }
   </style>
 </head>
-
 <body>
   <div class="box">
-    <h4>Chatbot Loaded</h4>
+    <h4>Chatbot Loaded ✅</h4>
     <p id="info">Loading...</p>
   </div>
 
   <script>
-    (function () {
-      var params = new URLSearchParams(window.location.search);
-      var clientId = params.get("clientId");
-      var infoEl = document.getElementById("info");
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const clientId = params.get("clientId");
+      const infoEl = document.getElementById("info");
 
       if (!clientId) {
         infoEl.textContent = "Client ID missing";
         return;
       }
 
-      fetch("https://chatbot-backend-gjcv.onrender.com/widget/config/" + encodeURIComponent(clientId))
-        .then(function (res) {
-          if (!res.ok) {
-            throw new Error("Request failed");
-          }
+      fetch("/widget/config/" + encodeURIComponent(clientId))
+        .then(res => {
+          if (!res.ok) throw new Error("Request failed");
           return res.json();
         })
-        .then(function (cfg) {
-          var displayName = clientId;
-
-          if (cfg) {
-            if (cfg.name) displayName = cfg.name;
-            else if (cfg.botName) displayName = cfg.botName;
-          }
-
+        .then(cfg => {
+          const displayName = cfg?.name || cfg?.botName || clientId;
           infoEl.textContent = "Client: " + displayName;
         })
-        .catch(function () {
+        .catch(() => {
           infoEl.textContent = "Config load failed";
         });
     })();
