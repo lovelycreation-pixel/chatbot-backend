@@ -8,22 +8,46 @@ const Client = require("../models/Client");
 function generateWidgetCode(client) {
   const clientId = client.clientId || "";
   const domain = client.domain || "";
+  const BASE_URL = "https://chatbot-backend-gjcv.onrender.com";
 
-  return `<script>
-(function(){
-  if ("${domain}" && !location.hostname.includes("${domain}")) return;
-  const iframe = document.createElement("iframe");
-  iframe.src = "/widget-ui.html?clientId=${encodeURIComponent(clientId)}";
-  iframe.style.position = "fixed";
-  iframe.style.bottom = "20px";
-  iframe.style.right = "20px";
-  iframe.style.width = "360px";
-  iframe.style.height = "520px";
-  iframe.style.border = "none";
-  iframe.style.zIndex = "999999";
-  document.body.appendChild(iframe);
+  return `
+<script>
+(function () {
+  try {
+    var allowedDomain = "${domain}";
+    if (allowedDomain) {
+      if (
+        location.hostname !== allowedDomain &&
+        !location.hostname.endsWith("." + allowedDomain)
+      ) {
+        return;
+      }
+    }
+
+    if (document.getElementById("mother-chatbot-iframe")) return;
+
+    var iframe = document.createElement("iframe");
+    iframe.id = "mother-chatbot-iframe";
+    iframe.src = "${BASE_URL}/widget-ui.html?clientId=${encodeURIComponent(
+      clientId
+    )}";
+    iframe.style.position = "fixed";
+    iframe.style.bottom = "20px";
+    iframe.style.right = "20px";
+    iframe.style.width = "360px";
+    iframe.style.height = "520px";
+    iframe.style.border = "none";
+    iframe.style.borderRadius = "12px";
+    iframe.style.zIndex = "999999";
+    iframe.style.boxShadow = "0 8px 24px rgba(0,0,0,0.2)";
+
+    document.body.appendChild(iframe);
+  } catch (e) {
+    console.error("Chatbot widget error", e);
+  }
 })();
-</script>`;
+</script>
+`;
 }
 
 /* ======================
@@ -35,9 +59,12 @@ router.get("/config/:clientId", async (req, res) => {
       { clientId: req.params.clientId },
       {
         clientId: 1,
+        name: 1,
         botName: 1,
         avatar: 1,
-        fallback: 1
+        fallback: 1,
+        domain: 1,
+        tokens: 1
       }
     ).lean();
 
@@ -46,14 +73,14 @@ router.get("/config/:clientId", async (req, res) => {
     }
 
     res.json({
-  clientId: client.clientId,
-  name: client.name,
-  botName: client.botName,
-  avatar: client.avatar,
-  fallback: client.fallback,
-  domain: client.domain,
-  tokens: client.tokens
-});
+      clientId: client.clientId,
+      name: client.name || "",
+      botName: client.botName || "",
+      avatar: client.avatar || "",
+      fallback: client.fallback || "",
+      domain: client.domain || "",
+      tokens: client.tokens || 0
+    });
   } catch (err) {
     console.error("Widget config error:", err);
     res.status(500).json({ error: "Server error" });
@@ -63,6 +90,7 @@ router.get("/config/:clientId", async (req, res) => {
 /* ======================
    EXPORTS
 ====================== */
-// Export the router for /config AND the generator function
-module.exports = router;
-module.exports.generateWidgetCode = generateWidgetCode;
+module.exports = {
+  router,
+  generateWidgetCode
+};
