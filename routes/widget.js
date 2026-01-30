@@ -6,23 +6,22 @@ const Client = require("../models/Client");
    WIDGET CODE GENERATOR
 ====================== */
 function generateWidgetCode(client) {
+  const clientId = client.clientId || "";
+  const domain = client.domain || "";
+
   return `<script>
 (function(){
-  const clientId = "${client.clientId}";
-  const allowedDomain = "${client.domain || ""}";
-  if (allowedDomain && !location.hostname.includes(allowedDomain)) return;
-
+  if ("${domain}" && !location.hostname.includes("${domain}")) return;
   const iframe = document.createElement("iframe");
-iframe.src = "https://chatbot-backend-gjcv.onrender.com/widget-ui.html?clientId=" + clientId;
-iframe.style.position = "fixed";
-iframe.style.bottom = "20px";
-iframe.style.right = "20px";
-iframe.style.width = "360px";
-iframe.style.height = "520px";
-iframe.style.border = "none";
-iframe.style.zIndex = "999999";
-
-document.body.appendChild(iframe);
+  iframe.src = "/widget-ui.html?clientId=${encodeURIComponent(clientId)}";
+  iframe.style.position = "fixed";
+  iframe.style.bottom = "20px";
+  iframe.style.right = "20px";
+  iframe.style.width = "360px";
+  iframe.style.height = "520px";
+  iframe.style.border = "none";
+  iframe.style.zIndex = "999999";
+  document.body.appendChild(iframe);
 })();
 </script>`;
 }
