@@ -39,9 +39,11 @@ app.use(express.static("public"));
 async function getClientStorageUsage(clientId) {
   const messages = await Message.find({ clientId });
   const totalBytes = messages.reduce((acc, msg) => acc + (msg.size || 0), 0);
-  return totalBytes / (1024 * 1024); // MB
+  return {
+    usedBytes: totalBytes,
+    usedMB: totalBytes / (1024 * 1024)
+  };
 }
-
 
 
 // ======================
@@ -109,37 +111,14 @@ app.post("/chat", async (req, res) => {
     const reply = bestScore > 0 ? bestMatch : fallback;
 
     // Save messages if under storage limit
-const usedMB = await getClientStorageUsage(clientId);
+const { usedMB } = await getClientStorageUsage(clientId);
 const limitMB = client.storageLimitMB || 100;
-const canSaveHistory = usedMB < limitMB;
-
-// 🚫 STORAGE FULL → DO NOT SAVE
-if (!canSaveHistory) {
+if (usedMB >= limitMB) {
   return res.json({
     reply,
-    meta: {
-      historySaved: false,
-      storageUsedMB: usedMB,
-      storageLimitMB: limitMB,
-      storageFull: true
-    }
+    meta: { historySaved: false, storageUsedMB: usedMB, storageLimitMB: limitMB, storageFull: true }
   });
 }
-
-// ✅ SAFE TO SAVE
-await Message.create({
-  clientId,
-  role: "user",
-  content: message,
-  size: Buffer.byteLength(message, "utf8")
-});
-
-await Message.create({
-  clientId,
-  role: "bot",
-  content: reply,
-  size: Buffer.byteLength(reply, "utf8")
-});
 
 // Normal response
 res.json({
