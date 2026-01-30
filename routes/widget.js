@@ -28,9 +28,7 @@ function generateWidgetCode(client) {
 
     var iframe = document.createElement("iframe");
     iframe.id = "mother-chatbot-iframe";
-    iframe.src = "${BASE_URL}/widget-ui.html?clientId=${encodeURIComponent(
-      clientId
-    )}";
+    iframe.src = "${BASE_URL}/widget-ui.html?clientId=${encodeURIComponent(clientId)}";
     iframe.style.position = "fixed";
     iframe.style.bottom = "20px";
     iframe.style.right = "20px";
@@ -88,9 +86,7 @@ router.get("/config/:clientId", async (req, res) => {
 });
 
 /* ======================
-   EXPORTS
+   EXPORTS (DEPLOY SAFE)
 ====================== */
-module.exports = {
-  router,
-  generateWidgetCode
-};
+module.exports = router;
+module.exports.generateWidgetCode = generateWidgetCode;
