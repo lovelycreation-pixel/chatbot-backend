@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Chat Widget</title>
 
   <style>
@@ -15,7 +15,7 @@
 
     .box {
       padding: 12px;
-      background: white;
+      background: #ffffff;
       height: 100%;
       box-sizing: border-box;
     }
@@ -28,7 +28,7 @@
     p {
       margin: 0;
       font-size: 13px;
-      color: #333;
+      color: #333333;
       word-break: break-word;
     }
   </style>
@@ -36,36 +36,40 @@
 
 <body>
   <div class="box">
-    <h4>Chatbot Loaded ✅</h4>
-    <p id="info">Loading…</p>
+    <h4>Chatbot Loaded</h4>
+    <p id="info">Loading...</p>
   </div>
 
   <script>
     (function () {
-      const params = new URLSearchParams(window.location.search);
-      const clientId = params.get("clientId");
-
-      const infoEl = document.getElementById("info");
+      var params = new URLSearchParams(window.location.search);
+      var clientId = params.get("clientId");
+      var infoEl = document.getElementById("info");
 
       if (!clientId) {
-        infoEl.innerText = "Client ID missing";
+        infoEl.textContent = "Client ID missing";
         return;
       }
 
-      fetch("/widget/config/" + encodeURIComponent(clientId))
-        .then(res => {
-          if (!res.ok) throw new Error("Request failed");
+      fetch("https://chatbot-backend-gjcv.onrender.com/widget/config/" + encodeURIComponent(clientId))
+        .then(function (res) {
+          if (!res.ok) {
+            throw new Error("Request failed");
+          }
           return res.json();
         })
-        .then(cfg => {
-          const displayName =
-            (cfg && (cfg.name || cfg.botName)) || clientId;
+        .then(function (cfg) {
+          var displayName = clientId;
 
-          infoEl.innerText = "Client: " + displayName;
+          if (cfg) {
+            if (cfg.name) displayName = cfg.name;
+            else if (cfg.botName) displayName = cfg.botName;
+          }
+
+          infoEl.textContent = "Client: " + displayName;
         })
-        .catch(err => {
-          console.error(err);
-          infoEl.innerText = "Config load failed";
+        .catch(function () {
+          infoEl.textContent = "Config load failed";
         });
     })();
   </script>
