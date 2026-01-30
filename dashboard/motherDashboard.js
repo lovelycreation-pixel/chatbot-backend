@@ -65,7 +65,7 @@ router.get("/clients", requireAdmin, async (req, res) => {
           storageUsedMB: usage.usedMB,
           messageCount: usage.messageCount,
           tokens: c.tokens || 0,
-          widgetCode: c.widgetCode || "" // ✅ Include widgetCode here
+          widgetCode: c.widgetCode || ""
         };
       })
     );
@@ -84,7 +84,6 @@ router.get("/clients/:clientId", requireAdmin, async (req, res) => {
   const client = await Client.findOne({ clientId: req.params.clientId }).lean();
   if (!client) return res.status(404).json({ error: "Client not found" });
 
-  // ✅ Include widgetCode for the single client
   res.json({
     ...client,
     widgetCode: client.widgetCode || ""
@@ -92,23 +91,39 @@ router.get("/clients/:clientId", requireAdmin, async (req, res) => {
 });
 
 // ======================
-// CREATE CLIENT
+// CREATE CLIENT ✅ FIXED
 // ======================
-const client = new Client({
-  clientId,
-  name,
-  adminInfo: req.body.adminInfo || "",
-  fallback: req.body.fallback || "Sorry, I don't understand.",
-  storageLimitMB,
-  tokens,
-  domain,
-  botName: req.body.botName || name, // set botName to client name initially
-  avatar: req.body.avatar || ""
-});
-    // Generate widget code
+router.post("/clients", requireAdmin, async (req, res) => {
+  try {
+    const {
+      clientId,
+      name,
+      domain,
+      storageLimitMB = 100,
+      tokens = 0
+    } = req.body;
+
+    if (!clientId || !name) {
+      return res.status(400).json({ error: "clientId and name are required" });
+    }
+
+    const client = new Client({
+      clientId,
+      name,
+      domain,
+      adminInfo: req.body.adminInfo || "",
+      fallback: req.body.fallback || "Sorry, I don't understand.",
+      storageLimitMB,
+      tokens,
+      botName: req.body.botName || name,
+      avatar: req.body.avatar || ""
+    });
+
+    // 🔥 Generate widget code
     client.widgetCode = generateWidgetCode(client);
 
     await client.save();
+
     res.json(client);
   } catch (err) {
     console.error("Create client error:", err);
@@ -160,10 +175,9 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
       });
     }
 
-    // ✅ APPLY UPDATES MANUALLY
     Object.assign(client, updates);
 
-    // 🔥 REGENERATE WIDGET CODE (THIS WAS MISSING)
+    // 🔥 Regenerate widget
     client.widgetCode = generateWidgetCode(client);
 
     await client.save();
@@ -174,6 +188,7 @@ router.patch("/clients/:clientId", requireAdmin, async (req, res) => {
     res.status(500).json({ error: "Failed to update client" });
   }
 });
+
 // ======================
 // DELETE CLIENT
 // ======================
